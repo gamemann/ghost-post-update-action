@@ -1,0 +1,118 @@
+name: Ghost Post Update Action
+description: "Automatically updates a post on a Ghost blog with the contents of the file from the caller's repository. Intended for the Markdown syntax."
+
+inputs:
+  verbose:
+    description: 'Verbose level (0 = none, 1 = basic, 2 = cURL response + basic).'
+    required: false
+    default: "1"
+  env_file:
+    description: "Location of environment file."
+    required: false
+    default: ".gpua/.env"
+  file:
+    description: "The file with Markdown contents to replace the Ghost post with."
+    required: false
+    default: "README.md"
+  ghost_api_url:
+    description: 'The Ghost API URL.'
+    required: true
+  ghost_admin_api_key:
+    description: 'The Ghost Admin API key.'
+    required: true
+  ghost_post_id:
+    description: 'The Ghost post ID.'
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Read and transform file in repository
+      id: read-and-fix
+      run: |
+        ${{ github.action_path }}/scripts/process_contents.sh "${{ inputs.env_file }}" "${{ inputs.file }}" "${{ inputs.verbose }}" > tmp.md
+        echo "FILE_JSON=$(jq -Rs . tmp.md)" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Generate Ghost Admin API JWT
+      id: jwt
+      run: |
+        IFS=':' read -r KEY_ID SECRET <<< "${{ inputs.ghost_admin_api_key }}"
+
+        HEADER='{"alg":"HS256","typ":"JWT","kid":"'"$KEY_ID"'"}'
+        PAYLOAD='{"iat":'$(date +%s)',"exp":'$(($(date +%s)+300))',"aud":"/admin/"}'
+
+        b64enc() { echo -n "$1" | openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+
+        JWT_HEADER=$(b64enc "$HEADER")
+        JWT_PAYLOAD=$(b64enc "$PAYLOAD")
+
+        SECRET_HEX=$(echo "$SECRET" | xxd -r -p 2>/dev/null || echo "$SECRET" | base64 -d | xxd -p -c 256)
+
+        SIGNATURE=$(echo -n "$JWT_HEADER.$JWT_PAYLOAD" \
+          | openssl dgst -binary -sha256 -mac HMAC -macopt hexkey:$SECRET_HEX \
+          | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+
+        TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$SIGNATURE"
+
+        echo "GHOST_JWT=$TOKEN" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Fetch latest updated_at timestamp
+      id: fetch-timestamp
+      env:
+        JWT: ${{ env.GHOST_JWT }}
+      run: |
+        resp=$(curl -s -H "Authorization: Ghost $JWT" "${{ inputs.ghost_api_url }}/posts/${{ inputs.ghost_post_id }}?formats=lexical")
+        echo "UPDATED_AT=$(echo $resp | jq -r '.posts[0].updated_at')" >> $GITHUB_ENV
+      shell: bash
+
+
+    - name: Update Ghost post (with lexical markdown)
+      env:
+        JWT: ${{ env.GHOST_JWT }}
+        FILE_JSON: ${{ env.FILE_JSON }}
+        UPDATED_AT: ${{ env.UPDATED_AT }}
+      run: |
+        VERBOSE="${{ inputs.verbose }}"
+        API_URL="${{ inputs.ghost_api_url }}"
+        POST_ID="${{ inputs.ghost_post_id }}"
+
+        ESCAPED_JSON=$(echo "$FILE_JSON" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+        LEXICAL_JSON="{\"root\":{\"children\":[{\"type\":\"markdown\",\"version\":1,\"markdown\":$ESCAPED_JSON},{\"children\":[],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1}],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"root\",\"version\":1}}"
+
+        json_payload=$(cat <<EOF
+        {
+          "posts": [
+            {
+              "id": "$POST_ID",
+              "lexical": "$LEXICAL_JSON",
+              "updated_at": "$UPDATED_AT"
+            }
+          ]
+        }
+        EOF
+        )
+
+        if [ "$VERBOSE" -ge 1 ]; then
+          echo "✅ Updating Ghost post ID: $POST_ID"
+        fi
+
+        response=$(curl -s -X PUT "$API_URL/posts/$POST_ID/" \
+          -H "Authorization: Ghost $JWT" \
+          -H "Content-Type: application/json" \
+          -H "Accept-Version: v5.130" \
+          -d "$json_payload")
+
+        if [ "$VERBOSE" -ge 2 ]; then
+          echo "API response from $API_URL/posts/$POST_ID/:"
+          echo
+          echo "$response"
+        fi
+
+        if [ "$VERBOSE" -ge 1 ]; then
+          echo "✅ Update complete."
+        fi
+      shell: bash
