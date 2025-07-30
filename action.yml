@@ -38,23 +38,28 @@ runs:
     - name: Generate Ghost Admin API JWT
       id: jwt
       run: |
-        IFS=':' read -r KEY_ID SECRET <<< "${{ inputs.ghost_admin_api_key }}"
+        TMPIFS=$IFS
+        IFS=':' read ID SECRET <<< "{{ inputs.ghost_admin_api_key }}"
+        IFS=$TMPIFS
 
-        HEADER='{"alg":"HS256","typ":"JWT","kid":"'"$KEY_ID"'"}'
-        PAYLOAD='{"iat":'$(date +%s)',"exp":'$(($(date +%s)+300))',"aud":"/admin/"}'
+        NOW=$(date +'%s')
+        FIVE_MINS=$(($NOW + 300))
+        HEADER="{\"alg\": \"HS256\",\"typ\": \"JWT\", \"kid\": \"$ID\"}"
+        PAYLOAD="{\"iat\":$NOW,\"exp\":$FIVE_MINS,\"aud\": \"/admin/\"}"
 
-        b64enc() { echo -n "$1" | openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+        base64_url_encode() {
+            declare input=${1:-$(</dev/stdin)}
+            printf '%s' "${input}" | base64 | tr -d '=' | tr '+' '-' | tr '/' '_' | tr -d '\n' 
+        }
 
-        JWT_HEADER=$(b64enc "$HEADER")
-        JWT_PAYLOAD=$(b64enc "$PAYLOAD")
+        header_base64=$(base64_url_encode "${HEADER}")
+        payload_base64=$(base64_url_encode "${PAYLOAD}")
 
-        SECRET_HEX=$(echo "$SECRET" | xxd -r -p 2>/dev/null || echo "$SECRET" | base64 -d | xxd -p -c 256)
+        header_payload="${header_base64}.${payload_base64}"
 
-        SIGNATURE=$(echo -n "$JWT_HEADER.$JWT_PAYLOAD" \
-          | openssl dgst -binary -sha256 -mac HMAC -macopt hexkey:$SECRET_HEX \
-          | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+        signature=$(printf '%s' "${header_payload}" | openssl dgst -binary -sha256 -mac HMAC -macopt hexkey:$SECRET | base64_url_encode)
 
-        TOKEN="$JWT_HEADER.$JWT_PAYLOAD.$SIGNATURE"
+        TOKEN="${header_payload}.${signature}"
 
         echo "GHOST_JWT=$TOKEN" >> $GITHUB_ENV
       shell: bash
@@ -103,7 +108,6 @@ runs:
         response=$(curl -s -X PUT "$API_URL/posts/$POST_ID/" \
           -H "Authorization: Ghost $JWT" \
           -H "Content-Type: application/json" \
-          -H "Accept-Version: v5.130" \
           -d "$json_payload")
 
         if [ "$VERBOSE" -ge 2 ]; then
