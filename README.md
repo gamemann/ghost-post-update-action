@@ -43,6 +43,7 @@ Here is the configuration for that file. The following general variables are ava
 | Name | Default | Description |
 | ---- | ------- | ----------- |
 | `LINES_SKIP` | *N/A* | A list of line numbers to skip in the final Markdown output to the Ghost post separated by commas (if multiple lines). |
+| `DEL_MULTIPLE_HYPHENS_IN_LINKS` | `0` | If set to `1`, will replace multiple hyphens with just a single `-`. |
 
 ### Header Links
 This action supports mapping header link URLs if needed.
