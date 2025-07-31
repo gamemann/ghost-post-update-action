@@ -77,9 +77,20 @@ runs:
         API_URL="${{ inputs.ghost_api_url }}"
         POST_ID="${{ inputs.ghost_post_id }}"
 
+        if [[ "$VERBOSE" -ge 4 ]]; then
+          echo "Retrieving full response when retrieving 'updated_at' timestamp..."
+          echo
+
+          resp_verbose=$(curl -v -s -H "Authorization: Ghost $JWT" "$API_URL/posts/$POST_ID?formats=lexical")
+
+          echo "$resp_verbose"
+        fi
+
         resp=$(curl -s -H "Authorization: Ghost $JWT" "$API_URL/posts/$POST_ID?formats=lexical")
 
         if [[ "$VERBOSE" -ge 3 ]]; then
+          echo "Fetching 'updated_at' timestamp to: $API_URL/posts/$POST_ID?formats=lexical"
+          echo
           echo "API Response:"
           echo
           echo "$resp"
