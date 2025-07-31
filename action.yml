@@ -38,9 +38,7 @@ runs:
     - name: Generate Ghost Admin API JWT
       id: jwt
       run: |
-        TMPIFS=$IFS
-        IFS=':' read ID SECRET <<< "{{ inputs.ghost_admin_api_key }}"
-        IFS=$TMPIFS
+        IFS=':' read -r ID SECRET <<< "${{ inputs.ghost_admin_api_key }}"
 
         NOW=$(date +'%s')
         FIVE_MINS=$(($NOW + 300))
