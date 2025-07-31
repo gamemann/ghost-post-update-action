@@ -86,7 +86,7 @@ runs:
           echo "$resp_verbose"
         fi
 
-        resp=$(curl -s -H "Authorization: Ghost $JWT" "$API_URL/posts/$POST_ID?formats=lexical")
+        resp=$(curl -s -H "Authorization: Ghost $JWT" "$API_URL/posts/$POST_ID/?formats=lexical")
 
         if [[ "$VERBOSE" -ge 3 ]]; then
           echo "Fetching 'updated_at' timestamp to: $API_URL/posts/$POST_ID?formats=lexical"
