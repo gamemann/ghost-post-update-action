@@ -41,7 +41,8 @@ runs:
         IFS=':' read -r ID SECRET <<< "${{ inputs.ghost_admin_api_key }}"
 
         if [[ -z "$ID" || -z "$SECRET" ]]; then
-          echo "❌ Invalid or missing Ghost Admin API key (expected format 'id:secret')."
+          echo "❌ Error: Invalid or missing Ghost Admin API key (expected format 'id:secret')."
+
           exit 1
         fi
 
@@ -84,9 +85,16 @@ runs:
           echo "$resp"
         fi
 
-        echo "UPDATED_AT=$(echo $resp | jq -r '.posts[0].updated_at')" >> $GITHUB_ENV
-      shell: bash
+        UPDATED_AT=$(echo "$resp" | jq -r '.posts[0].updated_at // empty')
 
+        if [[ -z "$UPDATED_AT" ]]; then
+          echo "⚠️ Warning: 'updated_at' is empty, attempting to use current time instead..."
+
+          UPDATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+        fi
+
+        echo "UPDATED_AT=$UPDATED_AT" >> $GITHUB_ENV
+      shell: bash
 
     - name: Update Ghost post (with lexical markdown)
       env:
