@@ -21,7 +21,7 @@ Here are a list of inputs you will need to pass to the action from your reposito
 
 | Name | Default | Description |
 | ---- | ------- | ----------- |
-| `verbose` | `1` | What verbose output to print in the workflow (0 = None. 1 = Basic updates which includes post ID. 2 = everything from value 1, but with response output from the Ghost API via cURL) |
+| `verbose` | `1` | What verbose output to print in the workflow (0 = None. 1 = Basic updates which includes post ID. 2 = everything from value 1, but with response output from the Ghost API via cURL. 3 = Escaped strings and more verbose cURL output) |
 | `env_file` | `.gpua/.env` | The environmental file to load. Look at [Environment Configuration](#environment-configuration) for more details! |
 | `file` | `README.md` | The local Markdown file whose contents will replace the Ghost post. |
 | `ghost_api_url` | *N/A* | The Ghost API URL (e.g., `https://blog.moddingcommunity.com/ghost/api/admin`). |
