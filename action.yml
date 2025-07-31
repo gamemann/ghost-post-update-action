@@ -40,6 +40,11 @@ runs:
       run: |
         IFS=':' read -r ID SECRET <<< "${{ inputs.ghost_admin_api_key }}"
 
+        if [[ -z "$ID" || -z "$SECRET" ]]; then
+          echo "❌ Invalid or missing Ghost Admin API key (expected format 'id:secret')."
+          exit 1
+        fi
+
         NOW=$(date +'%s')
         FIVE_MINS=$(($NOW + 300))
         HEADER="{\"alg\": \"HS256\",\"typ\": \"JWT\", \"kid\": \"$ID\"}"
@@ -85,6 +90,16 @@ runs:
         ESCAPED_JSON=$(echo "$FILE_JSON" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
         LEXICAL_JSON="{\"root\":{\"children\":[{\"type\":\"markdown\",\"version\":1,\"markdown\":$ESCAPED_JSON},{\"children\":[],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1}],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"root\",\"version\":1}}"
+
+        if [[ "$VERBOSE" -ge 3 ]]; then
+          echo "Escaped JSON:"
+          echo
+          echo "$ESCAPED_JSON"
+          echo
+          echo "Lexical JSON:"
+          echo
+          echo "$LEXICAL_JSON"
+        fi
 
         json_payload=$(cat <<EOF
         {
