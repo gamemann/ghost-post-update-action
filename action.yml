@@ -105,8 +105,7 @@ runs:
         {
           "posts": [
             {
-              "id": "$POST_ID",
-              "lexical": "$LEXICAL_JSON",
+              "lexical": $LEXICAL_JSON,
               "updated_at": "$UPDATED_AT"
             }
           ]
