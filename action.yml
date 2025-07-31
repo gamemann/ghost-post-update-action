@@ -3,7 +3,7 @@ description: "Automatically updates a post on a Ghost blog with the contents of 
 
 inputs:
   verbose:
-    description: 'Verbose level (0 = none, 1 = basic, 2 = cURL response + basic).'
+    description: 'Verbose level (0 = None. 1 = Basic. 2 = cURL response + basic. 3 = Escaped strings and more verbose cURL output).'
     required: false
     default: "1"
   env_file:
@@ -77,7 +77,7 @@ runs:
         API_URL="${{ inputs.ghost_api_url }}"
         POST_ID="${{ inputs.ghost_post_id }}"
 
-        if [[ "$VERBOSE" -ge 4 ]]; then
+        if [[ "$VERBOSE" -ge 3 ]]; then
           echo "Retrieving full response when retrieving 'updated_at' timestamp..."
           echo
 
@@ -88,8 +88,8 @@ runs:
 
         resp=$(curl -s -H "Authorization: Ghost $JWT" "$API_URL/posts/$POST_ID/?formats=lexical")
 
-        if [[ "$VERBOSE" -ge 3 ]]; then
-          echo "Fetching 'updated_at' timestamp to: $API_URL/posts/$POST_ID?formats=lexical"
+        if [[ "$VERBOSE" -ge 2 ]]; then
+          echo "Fetching 'updated_at' timestamp to: '$API_URL/posts/$POST_ID/?formats=lexical'"
           echo
           echo "API Response:"
           echo
@@ -143,7 +143,13 @@ runs:
           echo "✅ Updating Ghost post ID: $POST_ID"
         fi
 
-        resp=$(curl -s -X PUT "$API_URL/posts/$POST_ID/" \
+        FLAGS=""
+
+        if [[ "$VERBOSE" -ge 3 ]]; then
+          FLAGS="-v"
+        fi
+
+        resp=$(curl $FLAGS -s -X PUT "$API_URL/posts/$POST_ID/" \
           -H "Authorization: Ghost $JWT" \
           -H "Content-Type: application/json" \
           -d "$json_payload")
