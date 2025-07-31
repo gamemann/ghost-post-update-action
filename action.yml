@@ -89,8 +89,6 @@ runs:
 
         ESCAPED_JSON=$(echo "$FILE_JSON" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
-        LEXICAL_JSON="{\"root\":{\"children\":[{\"type\":\"markdown\",\"version\":1,\"markdown\":$ESCAPED_JSON},{\"children\":[],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1}],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"root\",\"version\":1}}"
-
         if [[ "$VERBOSE" -ge 3 ]]; then
           echo "Escaped JSON:"
           echo
@@ -105,7 +103,7 @@ runs:
         {
           "posts": [
             {
-              "lexical": $LEXICAL_JSON,
+              "lexical": "{\\"root\\":{\\"children\\":[{\\"type\\":\\"markdown\\",\\"version\\":1,\\"markdown\\":$ESCAPED_JSON},{\\"children\\":[],\\"direction\\":null,\\"format\\":\\"\\",\\"indent\\":0,\\"type\\":\\"paragraph\\",\\"version\\":1}],\\"direction\\":null,\\"format\\":\\"\\",\\"indent\\":0,\\"type\\":\\"root\\",\\"version\\":1}}",
               "updated_at": "$UPDATED_AT"
             }
           ]
