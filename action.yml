@@ -81,7 +81,7 @@ runs:
           echo "Retrieving full response when retrieving 'updated_at' timestamp..."
           echo
 
-          resp_verbose=$(curl -v -s -H "Authorization: Ghost $JWT" "$API_URL/posts/$POST_ID?formats=lexical")
+          resp_verbose=$(curl -v -s -H "Authorization: Ghost $JWT" "$API_URL/posts/$POST_ID/?formats=lexical")
 
           echo "$resp_verbose"
         fi
