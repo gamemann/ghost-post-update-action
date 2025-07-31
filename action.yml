@@ -90,13 +90,11 @@ runs:
         ESCAPED_JSON=$(echo "$FILE_JSON" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
         if [[ "$VERBOSE" -ge 3 ]]; then
+          echo "Updated At: '$UPDATED_AT'"
+
           echo "Escaped JSON:"
           echo
-          echo "$ESCAPED_JSON"
-          echo
-          echo "Lexical JSON:"
-          echo
-          echo "$LEXICAL_JSON"
+          echo "$ESCAPED_JSON"          
         fi
 
         json_payload=$(cat <<EOF
