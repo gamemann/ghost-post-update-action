@@ -86,7 +86,10 @@ runs:
           echo "$resp_verbose"
         fi
 
-        resp=$(curl -s -H "Authorization: Ghost $JWT" "$API_URL/posts/$POST_ID/?formats=lexical")
+        full_resp=$(curl -s -w "%{http_code}" -o resp_body.json -H "Authorization: Ghost $JWT" "$API_URL/posts/$POST_ID/?formats=lexical")
+
+        http_status="${full_resp: -3}"
+        resp=$(<resp_body.json)
 
         if [[ "$VERBOSE" -ge 2 ]]; then
           echo "Fetching 'updated_at' timestamp to: '$API_URL/posts/$POST_ID/?formats=lexical'"
@@ -94,6 +97,14 @@ runs:
           echo "API Response:"
           echo
           echo "$resp"
+        fi
+
+        if [[ "$http_status" -ne 200 ]]; then
+          echo "❌ Error: Failed to retrieve existing timestamp from: '$API_URL/posts/$POST_ID/?formats=lexical'"
+          echo
+          echo "HTTP Status Code: $http_status"
+
+          exit 1
         fi
 
         UPDATED_AT=$(echo "$resp" | jq -r '.posts[0].updated_at // empty')
@@ -139,7 +150,7 @@ runs:
         EOF
         )
 
-        if [ "$VERBOSE" -ge 1 ]; then
+        if [[ "$VERBOSE" -ge 1 ]]; then
           echo "✅ Updating Ghost post ID: $POST_ID"
         fi
 
@@ -148,19 +159,30 @@ runs:
         if [[ "$VERBOSE" -ge 3 ]]; then
           FLAGS="-v"
         fi
-
-        resp=$(curl $FLAGS -s -X PUT "$API_URL/posts/$POST_ID/" \
+        
+        resp_full=$(curl $FLAGS -s  -w "%{http_code}" -o resp_body.json -X PUT "$API_URL/posts/$POST_ID/" \
           -H "Authorization: Ghost $JWT" \
           -H "Content-Type: application/json" \
           -d "$json_payload")
 
-        if [ "$VERBOSE" -ge 2 ]; then
+        http_status="${resp_full: -3}"
+        resp=$(<resp_body.json)
+
+        if [[ "$VERBOSE" -ge 2 ]]; then
           echo "API response from $API_URL/posts/$POST_ID/:"
           echo
           echo "$resp"
         fi
 
-        if [ "$VERBOSE" -ge 1 ]; then
+        if [[ "$http_status" -ne 200 ]]; then
+          echo "❌ Error: Failed to retrieve existing timestamp from: '$API_URL/posts/$POST_ID/?formats=lexical'"
+          echo
+          echo "HTTP Status Code: $http_status"
+
+          exit 1
+        fi
+
+        if [[ "$VERBOSE" -ge 1 ]]; then
           echo "✅ Update complete."
         fi
       shell: bash
